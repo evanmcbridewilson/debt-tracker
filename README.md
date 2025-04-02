@@ -1,16 +1,16 @@
 
-# Debt Snowball Tracker
+# Debt Snowball Tracker (Clean Version)
 
-This version is a fresh start — no saved user state or files are included.
+This version contains no saved state or file persistence — perfect for clean deployment or GitHub publishing.
 
-## How to Run
+## Features
+- Add multiple debts with APRs, payments, and balances
+- Visualize monthly progress with a line chart
+- Export payoff timeline as CSV and PDF
 
-Install dependencies:
+## Run It
+
 ```bash
 pip install streamlit pandas matplotlib fpdf
-```
-
-Then run:
-```bash
-streamlit run debt_snowball_tracker_clean.py
+streamlit run debt_snowball_tracker_final.py
 ```
