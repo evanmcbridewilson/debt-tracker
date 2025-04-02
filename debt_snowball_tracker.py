@@ -62,9 +62,11 @@ for i, acc in enumerate(st.session_state.accounts):
 
 for i in sorted(delete_indices, reverse=True):
     del st.session_state.accounts[i]
+    st.experimental_rerun()
 
 if st.button("➕ Add Account"):
     st.session_state.accounts.append({"name": "", "balance": 0.0, "apr": 0.0, "payment": 0.0})
+    st.experimental_rerun()
 
 st.markdown("### Additional Monthly Payment")
 extra_payment = st.number_input("Extra Monthly Payment", min_value=0.0, value=None, step=10.0, placeholder="e.g. 200.00", format="%.2f")
@@ -84,9 +86,11 @@ for i, ex in enumerate(st.session_state.extras):
 
 for i in sorted(delete_extra, reverse=True):
     del st.session_state.extras[i]
+    st.experimental_rerun()
 
 if st.button("➕ Add Scheduled Extra Payment"):
     st.session_state.extras.append({"amount": 0.0, "month": 1, "year": datetime.datetime.now().year})
+    st.experimental_rerun().year})
 
 if st.button("Calculate Payoff"):
     debts = sorted(st.session_state.accounts, key=lambda x: x["balance"])
@@ -100,7 +104,7 @@ if st.button("Calculate Payoff"):
     while any(d["balance"] > 0 for d in debts):
         sim_month = (current_month + month - 1) % 12 + 1
         sim_year = current_year + (current_month + month - 1) // 12
-        snowball_extra = extra_payment + sum(e["amount"] for e in extras if (e["year"] < sim_year) or (e["year"] == sim_year and e["month"] <= sim_month))
+        snowball_extra = (extra_payment or 0.0) + sum(e["amount"] for e in extras if (e["year"] < sim_year) or (e["year"] == sim_year and e["month"] <= sim_month)) or (e["year"] == sim_year and e["month"] <= sim_month))
         total_balance = sum(d["balance"] for d in debts)
         history.append({"Month": month, "Total Debt": total_balance})
 
@@ -122,9 +126,13 @@ if st.button("Calculate Payoff"):
     final_date = datetime.date(current_year, current_month, 1) + pd.DateOffset(months=month)
     st.success(f"You’ll be debt-free in {month} months (~{month//12} years, {month%12} months) — by {final_date.strftime('%B %Y')}!")
     df = pd.DataFrame(history)
+    df["Date"] = [
+        (datetime.date(current_year, current_month, 1) + pd.DateOffset(months=i)).strftime("%B %Y")
+        for i in df["Month"]
+    ]
     chart = render_chart(df)
     st.pyplot(chart)
 
     
     st.markdown(f"### Month-by-Month Debt Reduction (starting from {datetime.date.today().strftime('%B %Y')}):")
-st.dataframe(df.style.format({"Total Debt": "${:,.2f}"}))
+        st.dataframe(df[["Date", "Total Debt"]].style.format({"Total Debt": "${:,.2f}"}))
