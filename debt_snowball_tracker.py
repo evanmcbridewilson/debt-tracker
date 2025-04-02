@@ -74,14 +74,17 @@ extra_payment = st.number_input("Extra Monthly Payment", min_value=0.0, value=No
 st.markdown("### Scheduled Extra Payments")
 delete_extra = []
 for i, ex in enumerate(st.session_state.extras):
-    col1, col2, col3, col4 = st.columns([3, 3, 3, 1])
+    col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 2, 1])
     ex["amount"] = col1.number_input(f"Amount {i+1}", value=None if ex["amount"] == 0.0 else ex["amount"], step=10.0, min_value=0.0, placeholder="e.g. 500.00", key=f"extra_amt_{i}")
     month_names = [calendar.month_name[m] for m in range(1, 13)]
     ex_month = col2.selectbox(f"Start Month", options=month_names, index=(ex.get("month", 1) - 1), key=f"extra_month_{i}")
     ex_year = col3.number_input("Year", min_value=datetime.datetime.now().year, value=ex.get("year", datetime.datetime.now().year), step=1, key=f"extra_year_{i}")
     ex["month"] = month_names.index(ex_month) + 1
     ex["year"] = ex_year
-    if col4.button("🗑️", key=f"delete_extra_{i}"):
+    ex["frequency"] = col4.selectbox("Repeat", options=["Every Month", "Only Once", "Repeat X Months"], index=["Every Month", "Only Once", "Repeat X Months"].index(ex.get("frequency", "Every Month")), key=f"extra_freq_{i}")
+    if ex["frequency"] == "Repeat X Months":
+        ex["duration"] = st.number_input("# of Months", min_value=1, value=ex.get("duration", 1), step=1, key=f"duration_{i}")
+    if col5.button("🗑️", key=f"delete_extra_{i}"):
         delete_extra.append(i)
 
 for i in sorted(delete_extra, reverse=True):
@@ -89,7 +92,7 @@ for i in sorted(delete_extra, reverse=True):
     st.experimental_rerun()
 
 if st.button("➕ Add Scheduled Extra Payment"):
-    st.session_state.extras.append({"amount": 0.0, "month": 1, "year": datetime.datetime.now().year})
+    st.session_state.extras.append({"amount": 0.0, "month": 1, "year": datetime.datetime.now().year, "frequency": "Every Month", "duration": 1})
     st.experimental_rerun()
 
 if st.button("Calculate Payoff"):
@@ -104,10 +107,20 @@ if st.button("Calculate Payoff"):
     while any(d["balance"] > 0 for d in debts):
         sim_month = (current_month + month - 1) % 12 + 1
         sim_year = current_year + (current_month + month - 1) // 12
-        snowball_extra = (extra_payment or 0.0) + sum(
-        e["amount"] for e in extras
-        if (e["year"] < sim_year) or (e["year"] == sim_year and e["month"] <= sim_month)
-    )
+        snowball_extra = (extra_payment or 0.0)
+        for e in extras:
+            applies = False
+            if e.get("frequency") == "Only Once":
+                applies = (e["year"] == sim_year and e["month"] == sim_month)
+            elif e.get("frequency") == "Every Month":
+                applies = (e["year"] < sim_year) or (e["year"] == sim_year and e["month"] <= sim_month)
+            elif e.get("frequency") == "Repeat X Months":
+                duration = e.get("duration", 1)
+                start_index = (e["year"] - current_year) * 12 + (e["month"] - current_month)
+                if start_index <= month < start_index + duration:
+                    applies = True
+            if applies:
+                snowball_extra += e["amount"]
         total_balance = sum(d["balance"] for d in debts)
         history.append({"Month": month, "Total Debt": total_balance})
 
