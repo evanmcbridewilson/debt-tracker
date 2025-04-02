@@ -8,10 +8,23 @@ from fpdf import FPDF
 
 st.set_page_config(page_title="Debt Snowball Tracker", layout="wide")
 
-# Dark mode toggle
+# Initialize session state for accounts and theme
+if "num_accounts" not in st.session_state:
+    st.session_state.num_accounts = 3
 if "dark_mode" not in st.session_state:
     st.session_state.dark_mode = False
+
+# Sidebar dark mode toggle
 st.sidebar.checkbox("🌙 Dark Mode", value=st.session_state.dark_mode, key="dark_mode")
+
+# Theming colors
+if st.session_state.dark_mode:
+    st.markdown("""
+        <style>
+        body { background-color: #0e1117; color: #f0f0f0; }
+        .stApp { background-color: #0e1117; color: #f0f0f0; }
+        </style>
+    """, unsafe_allow_html=True)
 
 st.title("💸 Debt Snowball Tracker")
 SAVE_PATH = Path("debt_inputs.json")
@@ -34,9 +47,15 @@ def load_inputs():
 def save_inputs(data):
     SAVE_PATH.write_text(json.dumps(data))
 
-
 inputs = load_inputs()
-st.write("Enter your current debts below. You can rename cards and add or remove accounts.")
+
+# Adjust number of accounts based on user state
+if len(inputs["accounts"]) > st.session_state.num_accounts:
+    st.session_state.num_accounts = len(inputs["accounts"])
+
+# Add another account logic
+if st.button("➕ Add Another Account"):
+    st.session_state.num_accounts += 1
 
 accounts = inputs.get("accounts", [])
 extra_payment = inputs.get("extra_payment", 0.0)
@@ -45,17 +64,14 @@ monthly_income = inputs.get("monthly_income", 0.0)
 with st.form("debt_form"):
     updated_accounts = []
     st.markdown("### Debt Accounts")
-    for i, account in enumerate(accounts):
-        with st.expander(f"{account['name']} (Click to Edit)"):
-            name = st.text_input(f"Name {i+1}", value=account["name"], key=f"name_{i}")
-            balance = st.number_input(f"Balance {i+1}", value=account["balance"], step=100.0, min_value=0.0, key=f"balance_{i}")
-            apr = st.number_input(f"APR (%) {i+1}", value=account["apr"], step=0.1, min_value=0.0, key=f"apr_{i}")
-            payment = st.number_input(f"Payment {i+1}", value=account["payment"], step=10.0, min_value=0.0, key=f"payment_{i}")
+    for i in range(st.session_state.num_accounts):
+        default = accounts[i] if i < len(accounts) else {"name": f"Card {i+1}", "balance": 0.0, "apr": 0.0, "payment": 0.0}
+        with st.expander(f"{default['name']} (Click to Edit)"):
+            name = st.text_input(f"Name {i+1}", value=default["name"], key=f"name_{i}")
+            balance = st.number_input(f"Balance {i+1}", value=default["balance"], step=100.0, min_value=0.0, key=f"balance_{i}")
+            apr = st.number_input(f"APR (%) {i+1}", value=default["apr"], step=0.1, min_value=0.0, key=f"apr_{i}")
+            payment = st.number_input(f"Payment {i+1}", value=default["payment"], step=10.0, min_value=0.0, key=f"payment_{i}")
             updated_accounts.append({"name": name, "balance": balance, "apr": apr, "payment": payment})
-
-    add_account = st.checkbox("Add another account")
-    if add_account:
-        updated_accounts.append({"name": "New Card", "balance": 0.0, "apr": 0.0, "payment": 0.0})
 
     extra_payment = st.number_input("Extra Monthly Payment", min_value=0.0, value=extra_payment, step=10.0)
     monthly_income = st.number_input("Monthly Income (optional)", min_value=0.0, value=monthly_income, step=100.0)
@@ -102,9 +118,8 @@ if submitted:
         st.balloons()
         st.toast(f"🏆 You've paid off {badge}% of your debt!")
 
-    total_debt_start = sum(d["balance"] for d in updated_accounts)
     if monthly_income:
-        dti = total_debt_start / monthly_income
+        dti = initial_debt / monthly_income
         st.info(f"📊 Debt-to-Income Ratio: {dti:.2f} (Based on total starting debt and monthly income)")
 
     df = pd.DataFrame(history)
