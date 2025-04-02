@@ -105,9 +105,9 @@ if st.button("Calculate Payoff"):
         sim_month = (current_month + month - 1) % 12 + 1
         sim_year = current_year + (current_month + month - 1) // 12
         snowball_extra = (extra_payment or 0.0) + sum(
-            e["amount"] for e in extras
-            if (e["year"] < sim_year) or (e["year"] == sim_year and e["month"] <= sim_month)
-        ) or (e["year"] == sim_year and e["month"] <= sim_month))
+        e["amount"] for e in extras
+        if (e["year"] < sim_year) or (e["year"] == sim_year and e["month"] <= sim_month)
+    )
         total_balance = sum(d["balance"] for d in debts)
         history.append({"Month": month, "Total Debt": total_balance})
 
@@ -138,4 +138,4 @@ if st.button("Calculate Payoff"):
 
     
     st.markdown(f"### Month-by-Month Debt Reduction (starting from {datetime.date.today().strftime('%B %Y')}):")
-st.dataframe(df[["Date", "Total Debt"]].style.format({"Total Debt": "${:,.2f}"}))
+    st.dataframe(df[["Date", "Total Debt"]].style.format({"Total Debt": "${:,.2f}"}))
