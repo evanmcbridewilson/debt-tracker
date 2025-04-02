@@ -90,7 +90,7 @@ for i in sorted(delete_extra, reverse=True):
 
 if st.button("➕ Add Scheduled Extra Payment"):
     st.session_state.extras.append({"amount": 0.0, "month": 1, "year": datetime.datetime.now().year})
-    st.experimental_rerun().year})
+    st.experimental_rerun()
 
 if st.button("Calculate Payoff"):
     debts = sorted(st.session_state.accounts, key=lambda x: x["balance"])
@@ -104,7 +104,10 @@ if st.button("Calculate Payoff"):
     while any(d["balance"] > 0 for d in debts):
         sim_month = (current_month + month - 1) % 12 + 1
         sim_year = current_year + (current_month + month - 1) // 12
-        snowball_extra = (extra_payment or 0.0) + sum(e["amount"] for e in extras if (e["year"] < sim_year) or (e["year"] == sim_year and e["month"] <= sim_month)) or (e["year"] == sim_year and e["month"] <= sim_month))
+        snowball_extra = (extra_payment or 0.0) + sum(
+            e["amount"] for e in extras
+            if (e["year"] < sim_year) or (e["year"] == sim_year and e["month"] <= sim_month)
+        ) or (e["year"] == sim_year and e["month"] <= sim_month))
         total_balance = sum(d["balance"] for d in debts)
         history.append({"Month": month, "Total Debt": total_balance})
 
@@ -135,4 +138,4 @@ if st.button("Calculate Payoff"):
 
     
     st.markdown(f"### Month-by-Month Debt Reduction (starting from {datetime.date.today().strftime('%B %Y')}):")
-        st.dataframe(df[["Date", "Total Debt"]].style.format({"Total Debt": "${:,.2f}"}))
+st.dataframe(df[["Date", "Total Debt"]].style.format({"Total Debt": "${:,.2f}"}))
