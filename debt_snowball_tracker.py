@@ -36,7 +36,7 @@ def generate_pdf(history, month, chart_path, final_date):
     pdf.cell(200, 10, txt=f"Month-by-Month Debt Reduction (starting from {final_date.strftime('%B %Y')}):", ln=1)
     for row in history:
         pdf.cell(200, 8, txt=f"Month {int(row['Month'])}: ${row['Total Debt']:.2f}", ln=1)
-    return pdf.output(dest='S').encode('latin-1')
+    return pdf.output(dest='S').encode('latin-1', errors='ignore')
 
 # ---------- App UI ----------
 
@@ -126,9 +126,5 @@ if st.button("Calculate Payoff"):
     st.pyplot(chart)
 
     
-    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
-        chart.savefig(tmpfile.name, bbox_inches='tight')
-        chart_path = tmpfile.name
-
-    pdf_bytes = generate_pdf(history, month, chart_path, final_date)
-    st.download_button("Download Payoff Report as PDF", data=pdf_bytes, file_name="debt_payoff_report.pdf", mime="application/pdf")
+    st.markdown(f"### Month-by-Month Debt Reduction (starting from {datetime.date.today().strftime('%B %Y')}):")
+st.dataframe(df.style.format({"Total Debt": "${:,.2f}"}))
