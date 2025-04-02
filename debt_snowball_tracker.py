@@ -16,26 +16,24 @@ def render_chart(df):
     fig, ax = plt.subplots()
     ax.plot(df["Month"], df["Total Debt"], marker="o")
     ax.axhline(0, color='gray', linestyle='--')
-    for m in [12, 24, 36, 48, 60]:
-        ax.axvline(m, color='green', linestyle=':', alpha=0.3)
-        ax.text(m, ax.get_ylim()[1]*0.95, f"{m} mo", rotation=90, color='green')
+    
     ax.set_title("Debt Payoff Progress")
     ax.set_xlabel("Month")
     ax.set_ylabel("Total Debt ($)")
     ax.grid(True)
     return fig
 
-def generate_pdf(history, month, chart_path):
+def generate_pdf(history, month, chart_path, final_date):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     pdf.cell(200, 10, txt="Debt Snowball Payoff Report", ln=1, align="C")
-    pdf.cell(200, 10, txt=f"Total Months to Payoff: {month} (~{month//12} years, {month%12} months)", ln=2)
+    pdf.cell(200, 10, txt=f"Total Months to Payoff: {month} (~{month//12} years, {month%12} months) — by {final_date.strftime('%B %Y')}", ln=2)
     pdf.ln(5)
     pdf.image(chart_path, x=10, y=30, w=180)
     pdf.ln(100)
     pdf.set_font("Arial", size=10)
-    pdf.cell(200, 10, txt="Month-by-Month Debt Reduction:", ln=1)
+    pdf.cell(200, 10, txt="Month-by-Month Debt Reduction (starting from {final_date.strftime('%B %Y')}):", ln=1)
     for row in history:
         pdf.cell(200, 8, txt=f"Month {int(row['Month'])}: ${row['Total Debt']:.2f}", ln=1)
     return pdf.output(dest='S').encode('latin-1')
@@ -121,17 +119,16 @@ if st.button("Calculate Payoff"):
         if month > 300:
             break
 
-    st.success(f"You’ll be debt-free in {month} months (~{month//12} years, {month%12} months)!")
+    final_date = datetime.date(current_year, current_month, 1) + pd.DateOffset(months=month)
+st.success(f"You’ll be debt-free in {month} months (~{month//12} years, {month%12} months) — by {final_date.strftime('%B %Y')}!")
     df = pd.DataFrame(history)
     chart = render_chart(df)
     st.pyplot(chart)
 
-    csv = df.to_csv(index=False)
-    st.download_button("Download Payoff Timeline as CSV", data=csv, file_name="debt_snowball_payoff_timeline.csv", mime="text/csv")
-
+    
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
         chart.savefig(tmpfile.name, bbox_inches='tight')
         chart_path = tmpfile.name
 
-    pdf_bytes = generate_pdf(history, month, chart_path)
+    pdf_bytes = generate_pdf(history, month, chart_path, final_date)
     st.download_button("Download Payoff Report as PDF", data=pdf_bytes, file_name="debt_payoff_report.pdf", mime="application/pdf")
