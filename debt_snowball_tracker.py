@@ -33,7 +33,7 @@ def generate_pdf(history, month, chart_path, final_date):
     pdf.image(chart_path, x=10, y=30, w=180)
     pdf.ln(100)
     pdf.set_font("Arial", size=10)
-    pdf.cell(200, 10, txt="Month-by-Month Debt Reduction (starting from {final_date.strftime('%B %Y')}):", ln=1)
+    pdf.cell(200, 10, txt=f"Month-by-Month Debt Reduction (starting from {final_date.strftime('%B %Y')}):", ln=1)
     for row in history:
         pdf.cell(200, 8, txt=f"Month {int(row['Month'])}: ${row['Total Debt']:.2f}", ln=1)
     return pdf.output(dest='S').encode('latin-1')
