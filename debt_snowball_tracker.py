@@ -36,9 +36,9 @@ def generate_pdf(history, month, chart_path):
     pdf.cell(200, 10, txt="Month-by-Month Debt Reduction:", ln=1)
     for row in history:
         pdf.cell(200, 8, txt=f"Month {int(row['Month'])}: ${row['Total Debt']:.2f}", ln=1)
-    pdf_buffer = BytesIO()
-    pdf.output(pdf_buffer)
-    return pdf_buffer.getvalue()
+    
+    return pdf.output(dest='S').encode('latin-1')
+
 
 # ---------- App UI ----------
 
