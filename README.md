@@ -8,7 +8,6 @@ A visual, interactive tool for managing and accelerating your debt payoff strate
 - ➕ Apply extra payments that go toward the **lowest balance first**
 - 📅 Schedule additional payments to begin on a specific month
 - 📈 Visualize total debt reduction over time with a built-in chart
-- 📤 Export your progress as a **CSV** or detailed **PDF report** with visuals
 
 ## 🚀 Getting Started
 
