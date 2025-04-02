@@ -120,7 +120,7 @@ if st.button("Calculate Payoff"):
             break
 
     final_date = datetime.date(current_year, current_month, 1) + pd.DateOffset(months=month)
-st.success(f"You’ll be debt-free in {month} months (~{month//12} years, {month%12} months) — by {final_date.strftime('%B %Y')}!")
+    st.success(f"You’ll be debt-free in {month} months (~{month//12} years, {month%12} months) — by {final_date.strftime('%B %Y')}!")
     df = pd.DataFrame(history)
     chart = render_chart(df)
     st.pyplot(chart)
