@@ -5,6 +5,8 @@ from io import BytesIO
 from fpdf import FPDF
 import base64
 import tempfile
+import calendar
+import datetime
 
 st.set_page_config(page_title="Debt Snowball Tracker", layout="wide")
 
@@ -36,9 +38,7 @@ def generate_pdf(history, month, chart_path):
     pdf.cell(200, 10, txt="Month-by-Month Debt Reduction:", ln=1)
     for row in history:
         pdf.cell(200, 8, txt=f"Month {int(row['Month'])}: ${row['Total Debt']:.2f}", ln=1)
-    
     return pdf.output(dest='S').encode('latin-1')
-
 
 # ---------- App UI ----------
 
@@ -55,10 +55,10 @@ delete_indices = []
 for i, acc in enumerate(st.session_state.accounts):
     with st.expander(f"Account {i+1}"):
         cols = st.columns([3, 2, 2, 2, 1])
-        acc["name"] = cols[0].text_input("Name", value=acc["name"], key=f"name_{i}")
-        acc["balance"] = cols[1].number_input("Balance", value=acc["balance"], step=100.0, min_value=0.0, key=f"balance_{i}")
-        acc["apr"] = cols[2].number_input("APR (%)", value=acc["apr"], step=0.1, min_value=0.0, key=f"apr_{i}")
-        acc["payment"] = cols[3].number_input("Monthly Payment", value=acc["payment"], step=10.0, min_value=0.0, key=f"payment_{i}")
+        acc["name"] = cols[0].text_input("Name", value=acc["name"], placeholder="e.g. Credit Card", key=f"name_{i}")
+        acc["balance"] = cols[1].number_input("Balance", value=None if acc["balance"] == 0.0 else acc["balance"], step=100.0, min_value=0.0, placeholder="e.g. 2500.00", key=f"balance_{i}")
+        acc["apr"] = cols[2].number_input("APR (%)", value=None if acc["apr"] == 0.0 else acc["apr"], step=0.1, min_value=0.0, placeholder="e.g. 19.99", key=f"apr_{i}")
+        acc["payment"] = cols[3].number_input("Monthly Payment", value=None if acc["payment"] == 0.0 else acc["payment"], step=10.0, min_value=0.0, placeholder="e.g. 100.00", key=f"payment_{i}")
         if cols[4].button("🗑️", key=f"delete_{i}"):
             delete_indices.append(i)
 
@@ -69,22 +69,26 @@ if st.button("➕ Add Account"):
     st.session_state.accounts.append({"name": "", "balance": 0.0, "apr": 0.0, "payment": 0.0})
 
 st.markdown("### Additional Monthly Payment")
-extra_payment = st.number_input("Extra Monthly Payment", min_value=0.0, value=0.0, step=10.0, format="%.2f")
+extra_payment = st.number_input("Extra Monthly Payment", min_value=0.0, value=None, step=10.0, placeholder="e.g. 200.00", format="%.2f")
 
 st.markdown("### Scheduled Extra Payments")
 delete_extra = []
 for i, ex in enumerate(st.session_state.extras):
-    col1, col2, col3 = st.columns([4, 4, 1])
-    ex["amount"] = col1.number_input(f"Amount {i+1}", value=ex["amount"], step=10.0, min_value=0.0, key=f"extra_amt_{i}")
-    ex["start_month"] = col2.number_input(f"Start Month {i+1}", value=ex["start_month"], step=1, min_value=0, key=f"start_month_{i}")
-    if col3.button("🗑️", key=f"delete_extra_{i}"):
+    col1, col2, col3, col4 = st.columns([3, 3, 3, 1])
+    ex["amount"] = col1.number_input(f"Amount {i+1}", value=None if ex["amount"] == 0.0 else ex["amount"], step=10.0, min_value=0.0, placeholder="e.g. 500.00", key=f"extra_amt_{i}")
+    month_names = [calendar.month_name[m] for m in range(1, 13)]
+    ex_month = col2.selectbox(f"Start Month", options=month_names, index=(ex.get("month", 1) - 1), key=f"extra_month_{i}")
+    ex_year = col3.number_input("Year", min_value=datetime.datetime.now().year, value=ex.get("year", datetime.datetime.now().year), step=1, key=f"extra_year_{i}")
+    ex["month"] = month_names.index(ex_month) + 1
+    ex["year"] = ex_year
+    if col4.button("🗑️", key=f"delete_extra_{i}"):
         delete_extra.append(i)
 
 for i in sorted(delete_extra, reverse=True):
     del st.session_state.extras[i]
 
 if st.button("➕ Add Scheduled Extra Payment"):
-    st.session_state.extras.append({"amount": 0.0, "start_month": 0})
+    st.session_state.extras.append({"amount": 0.0, "month": 1, "year": datetime.datetime.now().year})
 
 if st.button("Calculate Payoff"):
     debts = sorted(st.session_state.accounts, key=lambda x: x["balance"])
@@ -92,9 +96,13 @@ if st.button("Calculate Payoff"):
     month = 0
     history = []
     initial_debt = sum(d["balance"] for d in debts)
+    current_year = datetime.datetime.now().year
+    current_month = datetime.datetime.now().month
 
     while any(d["balance"] > 0 for d in debts):
-        snowball_extra = extra_payment + sum(e["amount"] for e in extras if e["start_month"] <= month)
+        sim_month = (current_month + month - 1) % 12 + 1
+        sim_year = current_year + (current_month + month - 1) // 12
+        snowball_extra = extra_payment + sum(e["amount"] for e in extras if (e["year"] < sim_year) or (e["year"] == sim_year and e["month"] <= sim_month))
         total_balance = sum(d["balance"] for d in debts)
         history.append({"Month": month, "Total Debt": total_balance})
 
@@ -121,7 +129,6 @@ if st.button("Calculate Payoff"):
     csv = df.to_csv(index=False)
     st.download_button("Download Payoff Timeline as CSV", data=csv, file_name="debt_snowball_payoff_timeline.csv", mime="text/csv")
 
-    # Save chart to temp file for PDF
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
         chart.savefig(tmpfile.name, bbox_inches='tight')
         chart_path = tmpfile.name
